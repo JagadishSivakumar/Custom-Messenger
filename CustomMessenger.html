@@ -1,0 +1,102 @@
+<html>
+<head>
+  <title>Messenger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon href=icon.png">
+  <link rel="apple-touch-startup-image href=startup.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,700,400italic" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
+  <link rel="stylesheet" href="css/screen.css" type="text/stylesheet" />
+  <script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
+  <script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
+  <script src="http://cdn.pubnub.com/pubnub-3.4.4.js"></script>
+  <script src="js/messenger.js"></script>
+</head>
+<!-- Chat Page -->
+<div data-role="page" id="chatPage" data-theme="c" class="type-interior">
+
+  <div data-role="content">
+    <div data-role="header" data-position="fixed" data-tap-toggle="false">
+      <h1>Custom Messenger</h1>
+    </div>
+
+    <div data-role="content">
+      <ul data-role="listview" id="messageList">
+
+      </ul>
+    </div>
+
+    <div data-role="footer" data-theme="c">
+      <textarea id="messageContent"></textarea>
+        <div class="ui-grid-a">
+          <div class="ui-block-a"><a href="#" id="sendMessageButton" data-role="button">Send Message</a></div>
+          <div class="ui-block-b"><a href="#" id="backButton" data-rel="back" data-role="button">Multiple text</a></div>
+        </div>
+    </div>
+  </div><!--/content-->
+
+</div><!--/page-->
+</body>
+<script>
+
+$(document).ready(function () {
+  // Initialize the PubNub API connection.
+  var pubnub = PUBNUB.init({
+    publish_key: 'pub-c-65731fb1-01b8-40f9-872d-02e6ca2ee948',
+    subscribe_key: 'sub-c-67e878fa-b70f-11e7-bcea-b64ad28a6f98'
+  });
+
+  // Grab references for all of our elements.
+  var messageContent = $('#messageContent'),
+      sendMessageButton = $('#sendMessageButton'),
+      messageList = $('#messageList');
+
+  // Handles all the messages coming in from pubnub.subscribe.
+  function handleMessage(message) {
+    var messageEl = $("<li class='message'>"
+        + "<span class='username'>" + message.username + ": </span>"
+        + message.text
+        + "</li>");
+    messageList.append(messageEl);
+    messageList.listview('refresh');
+
+    // Scroll to bottom of page
+    $("html, body").animate({ scrollTop: $(document).height() - $(window).height() }, 'slow');
+  };
+
+  // Compose and send a message when the user clicks our send message button.
+  sendMessageButton.click(function (event) {
+    var message = messageContent.val();
+
+    if (message != '') {
+      pubnub.publish({
+        channel: 'chat',
+        message: {
+          username: 'user',
+          text: message
+        }
+      });
+
+      messageContent.val("");
+    }
+  });
+
+  // Also send a message when the user hits the enter button in the text area.
+  messageContent.bind('keydown', function (event) {
+    if((event.keyCode || event.charCode) !== 13) return true;
+    sendMessageButton.click();
+    return false;
+  });
+
+  // Subscribe to messages coming in from the channel.
+  pubnub.subscribe({
+    channel: 'chat',
+    message: handleMessage
+  });
+});
+</script>
+
+</html>
